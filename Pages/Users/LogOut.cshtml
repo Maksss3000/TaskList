@@ -1,0 +1,42 @@
+﻿@page
+@model LogoutModel
+@using System.Text.Json.Serialization;
+@using System;
+@using Microsoft.AspNetCore.Http;
+@using Microsoft.Extensions.DependencyInjection;
+
+<div class="bg-primary text-center text-white p-2 mt-2"><h4>Log Out</h4></div>
+<div class="m-2">
+    <h6>You are logged out</h6>
+    <a asp-page="Login" class="btn btn-secondary">OK</a>
+</div>
+
+
+
+
+
+@functions{
+
+    public class LogoutModel : PageModel
+    {
+
+        private IServiceProvider services;
+
+        private SignInManager<IdentityUser> signInManager;
+
+        public LogoutModel(SignInManager<IdentityUser> signInMgr, IServiceProvider serv)
+        {
+            signInManager = signInMgr;
+            services = serv;
+
+        }
+
+
+        public async Task OnGetAsync()
+        {
+
+            await signInManager.SignOutAsync();
+
+        }
+    }
+}

@@ -1,0 +1,117 @@
+﻿@page
+@model CreateModel
+
+<h5 class="bg-primary text-white text-center p-2 mt-2">Registration</h5>
+<form method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="form-group">
+        <label>User Name</label>
+        <input name="UserName" class="form-control" value="@Model.UserName" />
+    </div>
+    <div class="form-group">
+        <label>Email</label>
+        <input name="Email" class="form-control" value="@Model.Email" />
+    </div>
+    <div class="form-group">
+        <label>Password</label>
+        <input name="Password"  type="password" class="form-control" value="@Model.Password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a class="btn btn-secondary" asp-action="Index">Back</a>
+</form>
+
+
+
+
+
+@functions{
+
+    public class CreateModel : PageModel
+    {
+        private UserManager<IdentityUser> UserManager;
+        private RoleManager<IdentityRole> RoleManager;
+        private TaskListDbContext context;
+
+        public CreateModel(UserManager<IdentityUser> userManager,
+                           RoleManager<IdentityRole> roleManager,
+                           TaskListDbContext ctx)
+        {
+            UserManager = userManager;
+            RoleManager = roleManager;
+            context = ctx;
+        }
+
+        [BindProperty]
+        [Required]
+        public string UserName { get; set; }
+
+        [BindProperty]
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [BindProperty]
+        [Required]
+        public string Password { get; set; }
+
+        public async Task<IActionResult> OnPostAsync()
+        {
+            if (ModelState.IsValid)
+            {
+                IdentityUser user = new IdentityUser { UserName = UserName, Email = Email };
+                IdentityResult result = await UserManager.CreateAsync(user, Password);
+
+                if (result.Succeeded)
+                {
+                    string roleName = "User";
+                    IdentityRole role;
+                    bool roleExists = false;
+
+                    roleExists = await RoleManager.RoleExistsAsync(roleName);
+
+                    User newUser = new User {NickName=UserName ,Email=Email};
+                    context.Users.Add(newUser);
+                    context.SaveChanges();
+
+                    if (roleExists)
+                    {
+
+                        role = await RoleManager.FindByNameAsync(roleName);
+                        result = await UserManager.AddToRoleAsync(user, role.Name);
+                        if (result.Succeeded)
+                            return RedirectToPage("/Users/Login");
+                    }
+                    else
+                    {
+
+                        role= new IdentityRole { Name = roleName};
+                        IdentityResult roleResult = await RoleManager.CreateAsync(role);
+
+                        if (roleResult.Succeeded)
+                        {
+                            result = await UserManager.AddToRoleAsync(user, role.Name);
+                            if (result.Succeeded)
+                                return RedirectToPage("/Users/Login");
+                        }
+                    }
+
+
+                }
+
+                foreach (IdentityError err in result.Errors)
+                {
+                    ModelState.AddModelError("", err.Description);
+                }
+            }
+
+            return Page();
+        }
+
+
+
+    }
+}
+
+
+

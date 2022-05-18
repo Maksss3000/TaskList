@@ -1,0 +1,158 @@
+	
+//IN PowerShell .
+//In CMD it`s not work.
+
+	[GET]
+	http://localhost:27266/api/admin/allTasks
+	api/admin/allTasks.
+        [HttpGet("allTasks")]
+        public IActionResult GetAllTasks()
+        {
+            IEnumerable<Assignment> assignments = assignmentRepo.GetAllTasks();
+            return AssignmentResult(assignments);
+        }
+
+	[GET]
+	http://localhost:27266/api/admin/2
+	[HttpGet("{statusId}")]
+        public  IActionResult GetTaskByStatus(long statusId)
+        {
+            IEnumerable<Assignment> assignments = assignmentRepo.
+                                                        GetAssignmentsByStatus(statusId);
+
+            return AssignmentResult(assignments);
+        }
+
+Invoke-RestMethod http://localhost:27266/api/home/changeTaskStatus -Method POST -Body (@{TaskId=3} | ConvertTo-Json) -ContentType "application/json"
+ [HttpPost("changeTaskStatus")]
+        //In Form User Choosing Task(When he finished it.) from his task list.
+        //And Changing to Status Done.
+ public IActionResult ChangeTaskStatus(Ids ids)
+        {
+            long taskId = ids.TaskId;
+            string  NickName = User.FindFirstValue(ClaimTypes.Name);
+            long id = userRepo.GetUserId(NickName);
+            /*
+             * If we work with CMD/Powersell/PostMan 
+             * We can just send id of user.
+             * id=ids.UserId
+             */
+           
+            UserAssignment ua = userRepo.GetUserAsignment(id, taskId);
+            //If User are Responisble for this task.
+            //He can change Task`s Status, when he Finish Task.
+            if (ua != null)
+            {
+               
+                ua.Done = true;
+                ua.Date = DateTime.Now;
+                context.SaveChanges();
+                return Ok();
+            }
+            return BadRequest();
+            
+        }
+
+[POST]
+Invoke-RestMethod http://localhost:27266/api/admin/AddTask -Method POST -Body (@{ UserId=2; TaskId=5} | ConvertTo-Json) -ContentType "application/json"
+
+
+	//In Form(View) Admin choosing Task and User that will be Responsible for this Task.
+        //By entering Submit button admin send taskId and userId to Action.
+        [HttpPost("addTask")]
+        public IActionResult AddTaskToUser(Ids ids)
+        {
+            
+            long taskId = ids.TaskId;
+            long userId = ids.UserId;
+            Assignment task = assignmentRepo.GetAssignmentById(taskId);
+            User user = userRepo.GetUser(userId);
+
+            //Can`t find Task or User with this Id.
+            if (task == null || user == null)
+            {
+                return BadRequest();
+            }
+            UserAssignment ua = userRepo.GetUserAsignment(userId, taskId);
+            //Trying to add task to user , that already have this task.
+            if (ua != null)
+            {
+                return Redirect("/api/admin/allTasks");
+            }
+            //Adding to Task user.
+            //That mean`s that now user is Responsible for this Task.
+            task.Users.Add(user);
+            context.SaveChanges();
+            return Redirect("/api/admin/allTasks");
+        }
+
+[POST]
+Invoke-RestMethod http://localhost:27266/api/admin/addUpdateTask -Method POST -Body (@{Title="Golano";  Description="Java Desc";  DeadLineDate="2012-12-31T22:00:00.000Z"; CreationDate="2020-12-12T22:00:00.00Z";PriorityId=3; StatusId=1} | ConvertTo-Json) -ContentType "application/json"
+
+ [HttpPost("addUpdateTask")]
+        public IActionResult AddUpdateAssignment(Assignment assignment)
+        {
+
+            //Updating Existing assignment
+            //Or Adding new.
+             assignmentRepo.AddUpdateAssignment(assignment);
+             return Redirect("/api/admin/allTasks");
+            
+        }
+
+[PUT]
+//Changing Task status of specific user.
+Invoke-RestMethod http://localhost:27266/api/home/changeTaskStatus -Method PUT -Body (@{TaskId=3;} | ConvertTo-Json) -ContentType "application/json"
+[HttpPut("changeTaskStatus")]
+        //In Form User Choosing Task(When he finished it.) from his task list.
+        //And Changing to Status Done.
+        public IActionResult ChangeTaskStatus(Ids ids)
+        {
+           
+            long taskId = ids.TaskId;
+            string  NickName = User.FindFirstValue(ClaimTypes.Name);
+            long id = userRepo.GetUserId(NickName);
+           
+           
+            /*
+             * If we work with CMD/Powersell/PostMan 
+             * We can just send id of user.
+             * id=ids.UserId
+             */
+           
+            UserAssignment ua = userRepo.GetUserAsignment(id, taskId);
+            //If User are Responisble for this task.
+            //He can change Task`s Status, when he Finish Task.
+            if (ua != null)
+            {
+               
+                ua.Done = true;
+                ua.Date = DateTime.Now;
+                context.SaveChanges();
+                return Ok();
+            }
+            return NotFound();
+            //return BadRequest();
+            
+        }
+
+
+//DELETE
+[Delete]
+Invoke-RestMethod http://localhost:27266/api/admin/5 -Method DELETE               
+
+
+[HttpDelete("{taskId}")]
+        public void RemoveTask(long taskId)
+        {
+          
+            Assignment task = assignmentRepo.GetAssignmentById(taskId);
+           
+            if(task!=null)
+            {
+               assignmentRepo.RemoveAssignment(task);
+            }
+            
+
+        }
+
